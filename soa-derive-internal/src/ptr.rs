@@ -6,7 +6,7 @@ use crate::input::Input;
 pub fn derive(input: &Input) -> TokenStream {
     let name = &input.name;
     let visibility = &input.visibility;
-    let other_derive = &input.derive_with_exceptions();
+    // let other_derive = &input.derive_with_exceptions();
     let vec_name = &input.vec_name();
     let ptr_name = &input.ptr_name();
     let ptr_mut_name = &input.ptr_mut_name();
@@ -19,29 +19,45 @@ pub fn derive(input: &Input) -> TokenStream {
     let ref_doc_url = format!("[`{0}`](struct.{0}.html)", ref_name);
     let ref_mut_doc_url = format!("[`{0}`](struct.{0}.html)", ref_mut_name);
 
-    let fields_names = input.fields.iter()
-                                   .map(|field| field.ident.clone().unwrap())
-                                   .collect::<Vec<_>>();
+    let fields_names = input
+        .fields
+        .iter()
+        .map(|field| field.ident.clone().unwrap())
+        .collect::<Vec<_>>();
     let fields_names_1 = &fields_names;
     let fields_names_2 = &fields_names;
 
-    let fields_types = &input.fields.iter()
-                                    .map(|field| &field.ty)
-                                    .collect::<Vec<_>>();
-
-    let fields_doc = fields_names.iter()
-        .map(|field| format!("A pointer to a `{0}` from a [`{1}`](struct.{1}.html)", field, vec_name))
+    let fields_types = &input
+        .fields
+        .iter()
+        .map(|field| &field.ty)
         .collect::<Vec<_>>();
 
-    let fields_mut_doc = fields_names.iter()
-        .map(|field| format!("A mutable pointer to a `{0}` from a [`{1}`](struct.{1}.html)", field, vec_name))
+    let fields_doc = fields_names
+        .iter()
+        .map(|field| {
+            format!(
+                "A pointer to a `{0}` from a [`{1}`](struct.{1}.html)",
+                field, vec_name
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let fields_mut_doc = fields_names
+        .iter()
+        .map(|field| {
+            format!(
+                "A mutable pointer to a `{0}` from a [`{1}`](struct.{1}.html)",
+                field, vec_name
+            )
+        })
         .collect::<Vec<_>>();
 
     quote! {
         /// An analog of a pointer to
         #[doc = #doc_url]
         /// with struct of array layout.
-        #other_derive
+        // #other_derive
         #[derive(Copy, Clone)]
         #visibility struct #ptr_name {
             #(
@@ -53,7 +69,7 @@ pub fn derive(input: &Input) -> TokenStream {
         /// An analog of a mutable pointer to
         #[doc = #doc_url]
         /// with struct of array layout.
-        #other_derive
+        // #other_derive
         #[derive(Copy, Clone)]
         #visibility struct #ptr_mut_name {
             #(
