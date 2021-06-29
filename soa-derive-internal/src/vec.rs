@@ -392,6 +392,8 @@ pub fn derive(input: &Input) -> TokenStream {
     });
 
     generated.append_all(quote! {
+        use serde_with::SerializeAs;
+
         impl SerializeAs<Vec<#name>> for #vec_name {
         fn serialize_as<S>(source: &Vec<#name>, serializer: S) -> Result<S::Ok, S::Error>
                 where
@@ -403,6 +405,8 @@ pub fn derive(input: &Input) -> TokenStream {
     });
 
     generated.append_all(quote! {
+        use serde_with::DeserializeAs;
+
         impl<'de> DeserializeAs<'de, Vec<#name>> for #vec_name {
             fn deserialize_as<D>(deserializer: D) -> Result<Vec<#name>, D::Error>
             where
