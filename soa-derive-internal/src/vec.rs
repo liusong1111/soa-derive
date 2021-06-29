@@ -1,7 +1,7 @@
 use proc_macro2::{Span, TokenStream};
-use syn::Ident;
-use quote::TokenStreamExt;
 use quote::quote;
+use quote::TokenStreamExt;
+use syn::Ident;
 
 use crate::input::Input;
 
@@ -17,24 +17,36 @@ pub fn derive(input: &Input) -> TokenStream {
     let ptr_name = &input.ptr_name();
     let ptr_mut_name = &input.ptr_mut_name();
 
-    let fields_names = &input.fields.iter()
-                                   .map(|field| field.ident.as_ref().unwrap())
-                                   .collect::<Vec<_>>();
+    let fields_names = &input
+        .fields
+        .iter()
+        .map(|field| field.ident.as_ref().unwrap())
+        .collect::<Vec<_>>();
 
-    let fields_names_hygienic = input.fields.iter()
+    let fields_names_hygienic = input
+        .fields
+        .iter()
         .enumerate()
         .map(|(i, _)| Ident::new(&format!("___soa_derive_private_{}", i), Span::call_site()))
         .collect::<Vec<_>>();
 
     let first_field = &fields_names[0];
 
-    let fields_doc = fields_names.iter()
-                                 .map(|field| format!("A vector of `{0}` from a [`{1}`](struct.{1}.html)", field, name))
-                                 .collect::<Vec<_>>();
+    let fields_doc = fields_names
+        .iter()
+        .map(|field| {
+            format!(
+                "A vector of `{0}` from a [`{1}`](struct.{1}.html)",
+                field, name
+            )
+        })
+        .collect::<Vec<_>>();
 
-    let fields_types = &input.fields.iter()
-                                    .map(|field| &field.ty)
-                                    .collect::<Vec<_>>();
+    let fields_types = &input
+        .fields
+        .iter()
+        .map(|field| &field.ty)
+        .collect::<Vec<_>>();
 
     let mut generated = quote! {
         /// An analog to `
@@ -350,8 +362,69 @@ pub fn derive(input: &Input) -> TokenStream {
         }
     };
 
-    if input.derives.contains(&Ident::new("Clone", Span::call_site())) {
-        generated.append_all(quote!{
+    generated.append_all(quote! {
+        #[allow(dead_code)]
+        impl From<Vec<#name>> for #vec_name {
+            fn from(v: Vec<#name>) -> #vec_name {
+                let mut ret = #vec_name::with_capacity(v.len());
+                for item in v {
+                    ret.push(item);
+                }
+                ret
+            }
+        }
+    });
+
+    generated.append_all(quote! {
+        #[allow(dead_code)]
+        impl ::std::convert::Into<Vec<#name>> for #vec_name {
+            fn into(self) -> Vec<#name> {
+                let mut ret:Vec<#name> = Vec::with_capacity(self.len());
+                for i in 0..self.len() {
+                    // println!("{}", i);
+                    let r = self.index(i);
+                    let r = r.to_owned1();
+                    ret.push(r);
+                }
+                ret
+            }
+        }
+    });
+
+    generated.append_all(quote! {
+        impl SerializeAs<Vec<#name>> for #vec_name {
+        fn serialize_as<S>(source: &Vec<#name>, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                S: serde::Serializer,
+            {
+                source.serialize(serializer)
+            }
+        }
+    });
+
+    generated.append_all(quote! {
+        impl<'de> DeserializeAs<'de, Vec<#name>> for #vec_name {
+            fn deserialize_as<D>(deserializer: D) -> Result<Vec<#name>, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                let data = #vec_name::deserialize(deserializer).map_err(serde::de::Error::custom)?;
+                println!("data={:?}", data);
+                let ret = data.into();
+                // let mut ret: Vec<#name> = vec![];
+                // for (htype, end) in izip!(data.htype, data.end) {
+                //     ret.push(#name{ htype, end });
+                // }
+                Ok(ret)
+            }
+        }
+    });
+
+    if input
+        .derives
+        .contains(&Ident::new("Clone", Span::call_site()))
+    {
+        generated.append_all(quote! {
             #[allow(dead_code)]
             impl #vec_name {
                 /// Similar to [`

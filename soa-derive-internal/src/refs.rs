@@ -15,23 +15,39 @@ pub fn derive(input: &Input) -> TokenStream {
     let ref_doc_url = format!("[`{0}`](struct.{0}.html)", ref_name);
     let ref_mut_doc_url = format!("[`{0}`](struct.{0}.html)", ref_mut_name);
 
-    let fields_names = input.fields.iter()
-                                   .map(|field| field.ident.clone().unwrap())
-                                   .collect::<Vec<_>>();
+    let fields_names = input
+        .fields
+        .iter()
+        .map(|field| field.ident.clone().unwrap())
+        .collect::<Vec<_>>();
     let fields_names_1 = &fields_names;
     let fields_names_2 = &fields_names;
 
-    let fields_types = &input.fields.iter()
-                                    .map(|field| &field.ty)
-                                    .collect::<Vec<_>>();
+    let fields_types = &input
+        .fields
+        .iter()
+        .map(|field| &field.ty)
+        .collect::<Vec<_>>();
 
-    let fields_doc = fields_names.iter()
-                                 .map(|field| format!("A reference to a `{0}` from a [`{1}`](struct.{1}.html)", field, vec_name))
-                                 .collect::<Vec<_>>();
+    let fields_doc = fields_names
+        .iter()
+        .map(|field| {
+            format!(
+                "A reference to a `{0}` from a [`{1}`](struct.{1}.html)",
+                field, vec_name
+            )
+        })
+        .collect::<Vec<_>>();
 
-    let fields_mut_doc = fields_names.iter()
-                                     .map(|field| format!("A mutable reference to a `{0}` from a [`{1}`](struct.{1}.html)", field, vec_name))
-                                     .collect::<Vec<_>>();
+    let fields_mut_doc = fields_names
+        .iter()
+        .map(|field| {
+            format!(
+                "A mutable reference to a `{0}` from a [`{1}`](struct.{1}.html)",
+                field, vec_name
+            )
+        })
+        .collect::<Vec<_>>();
 
     quote! {
         /// A reference to a
@@ -56,6 +72,26 @@ pub fn derive(input: &Input) -> TokenStream {
                 pub #fields_names_1: &'a mut #fields_types,
             )*
         }
+
+        impl<'a> #ref_name<'a> {
+            fn to_owned1(&self) -> #name {
+                #name{#(#fields_names_1: self.#fields_names_2.clone(),)*}
+            }
+        }
+
+        // impl<'a> ::std::borrow::ToOwned for #ref_name<'a> {
+        //     type Owned = #name;
+        //     fn to_owned(&self) -> #name {
+        //         #name{#(#fields_names_1: *self.#fields_names_2,)*}
+        //     }
+        // }
+
+        // #[allow(dead_code)]
+        // impl<'a> std::borrow::Borrow<#ref_name<'a>> for #name {
+        //     fn borrow(&self) -> &#ref_name<'a> {
+        //         self.as_ref()
+        //     }
+        // }
 
         #[allow(dead_code)]
         impl #name {
